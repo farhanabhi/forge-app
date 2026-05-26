@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#c8ff00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FORGE">
+<meta name="description" content="Premium gym & nutrition tracker PWA">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>FORGE — Fitness Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TODAY -->
+  <div class="screen active" id="screen-today">
+    <div class="topbar">
+      <div>
+        <h1>FORGE</h1>
+        <div class="sub" id="today-date-label">Loading…</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bebas Neue';font-size:26px;color:var(--accent);line-height:1" id="streak-num">0</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:700">Day Streak</div>
+      </div>
+    </div>
+    <div id="today-content" style="padding-top:6px"></div>
+  </div>
+
+  <!-- PLANS -->
+  <div class="screen" id="screen-plans">
+    <div class="topbar">
+      <div><h1>PLANS</h1><div class="sub">Your workout cycles</div></div>
+      <button class="btn-icon primary" onclick="openNewPlanModal()"><i class="ti ti-plus"></i></button>
+    </div>
+    <div id="plans-content" style="padding-top:10px"></div>
+  </div>
+
+  <!-- NUTRITION -->
+  <div class="screen" id="screen-nutrition">
+    <div class="topbar">
+      <div><h1>NUTRITION</h1><div class="sub" id="nutr-date-label">Today</div></div>
+      <div style="display:flex;align-items:center;gap:2px">
+        <button onclick="shiftNutrDate(-1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:22px;padding:4px"><i class="ti ti-chevron-left"></i></button>
+        <button onclick="shiftNutrDate(1)"  style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:22px;padding:4px"><i class="ti ti-chevron-right"></i></button>
+      </div>
+    </div>
+    <div id="nutrition-content" style="padding-top:8px"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="screen" id="screen-progress">
+    <div class="topbar">
+      <div><h1>PROGRESS</h1><div class="sub">Charts & analytics</div></div>
+      <button class="btn-icon primary" onclick="openBWModal()"><i class="ti ti-weight"></i></button>
+    </div>
+    <div id="progress-content" style="padding-top:8px"></div>
+  </div>
+
+  <!-- ADD / MORE -->
+  <div class="screen" id="screen-add">
+    <div class="topbar">
+      <div><h1>CUSTOM</h1><div class="sub">Foods & settings</div></div>
+    </div>
+    <div id="add-content" style="padding-top:8px"></div>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <button class="active" onclick="switchScreen('today')">
+      <i class="ti ti-bolt"></i>TODAY
+    </button>
+    <button onclick="switchScreen('plans')">
+      <i class="ti ti-layout-cards"></i>PLANS
+    </button>
+    <button onclick="switchScreen('nutrition')">
+      <i class="ti ti-salad"></i>FOOD
+    </button>
+    <button onclick="switchScreen('progress')">
+      <i class="ti ti-chart-line"></i>PROGRESS
+    </button>
+    <button onclick="switchScreen('add')">
+      <i class="ti ti-adjustments"></i>MORE
+    </button>
+  </nav>
+</div>
+
+
+<!-- REST TIMER OVERLAY -->
+<div class="rest-overlay" id="rest-overlay">
+  <div class="rest-ex" id="rest-ex-name">Rest</div>
+  <div class="rest-circle">
+    <svg viewBox="0 0 160 160" width="160" height="160">
+      <circle cx="80" cy="80" r="72" fill="none" stroke="rgba(255,107,53,.15)" stroke-width="6"/>
+      <circle id="rest-circle-progress" cx="80" cy="80" r="72" fill="none"
+              stroke="var(--orange)" stroke-width="6" stroke-linecap="round"
+              style="stroke-dasharray:452;stroke-dashoffset:0;transition:stroke-dashoffset .9s linear"/>
+    </svg>
+    <div class="rest-count" id="rest-countdown">00:00</div>
+    <div class="rest-label">REST</div>
+  </div>
+  <button onclick="skipRest()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);padding:10px 28px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px">Skip Rest</button>
+</div>
+
+
+<!-- MODAL: PLAN BUILDER -->
+<div class="modal-bg" id="plan-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="plan-modal-title">New Plan</h2>
+      <button class="modal-close" onclick="closeModal('plan-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Plan Name</label>
+        <input type="text" id="plan-name-input" placeholder="e.g. Push Pull Legs">
+      </div>
+      <div class="form-row col2">
+        <div class="form-group">
+          <label>Goal</label>
+          <select id="plan-goal-select">
+            <option>Strength</option><option>Hypertrophy</option>
+            <option>Fat Loss</option><option>Athletic</option><option>Custom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select id="plan-dur-select" onchange="generateDaySlots(parseInt(this.value))">
+            <option value="7">7 Days</option>
+            <option value="14">14 Days</option>
+            <option value="21">21 Days</option>
+            <option value="28">28 Days</option>
+          </select>
+        </div>
+      </div>
+      <div class="section-label" style="padding:6px 0 6px">Days</div>
+      <div id="plan-days-list" style="padding:0 16px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('plan-modal')">Cancel</button>
+      <button class="btn-save"   onclick="savePlan()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: EXERCISE BUILDER -->
+<div class="modal-bg" id="ex-builder-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Exercises</h2>
+      <button class="modal-close" onclick="closeModal('ex-builder-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--accent);font-weight:600;padding:0 16px 10px" id="ex-builder-day-title"></div>
+      <div id="ex-list-builder" style="padding:0 16px"></div>
+
+      <!-- Add form -->
+      <div style="margin:14px 16px 0;padding:14px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border2)">
+        <div style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">+ Add Exercise</div>
+        <input type="text" id="ex-name" placeholder="Exercise name" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input type="text" id="ex-sets" placeholder="Sets (e.g. 4)" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px">
+          <input type="text" id="ex-reps" placeholder="Reps (e.g. 8-10)" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px">
+          <input type="number" id="ex-target-weight" placeholder="Target kg" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px">
+          <input type="text" id="ex-rest" placeholder="Rest (e.g. 2 min)" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <select id="ex-category" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px">
+            <option>Chest</option><option>Back</option><option>Shoulders</option>
+            <option>Biceps</option><option>Triceps</option><option>Legs</option>
+            <option>Core</option><option>Cardio</option><option>Full Body</option><option>Other</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:8px 10px">
+            <input type="checkbox" id="ex-weighted" checked style="width:16px;height:16px;accent-color:var(--accent)"> Weighted
+          </label>
+        </div>
+        <input type="text" id="ex-notes" placeholder="Notes (optional)" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;margin-bottom:10px">
+        <button style="width:100%;padding:10px;background:var(--accent);color:#000;border:none;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer" onclick="addExEntry()">Add Exercise</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('ex-builder-modal')">Back</button>
+      <button class="btn-save"   onclick="saveExBuilder()">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: LOG WORKOUT SET -->
+<div class="modal-bg" id="log-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="log-modal-title">Log Set</h2>
+      <button class="modal-close" onclick="closeModal('log-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="log-ex-id">
+      <div style="padding:0 16px 14px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">History:</div>
+        <div id="log-pr-hist" style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-bottom:14px;line-height:1.7"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label>Weight Used (kg)</label>
+            <input type="number" id="log-actual-weight" placeholder="e.g. 80" step="0.5" min="0" style="background:var(--bg3)">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Reps Done</label>
+            <input type="text" id="log-actual-reps" placeholder="e.g. 8" style="background:var(--bg3)">
+          </div>
+        </div>
+        <div id="log-vol-display" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('log-modal')">Cancel</button>
+      <button class="btn-save"   onclick="saveLogEntry()">Log It ✓</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: BODY WEIGHT -->
+<div class="modal-bg" id="bw-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Body Weight</h2>
+      <button class="modal-close" onclick="closeModal('bw-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="padding:0 16px 14px">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px" id="bw-modal-date"></div>
+        <div style="display:flex;gap:4px;align-items:flex-end;height:40px;margin-bottom:14px" id="bw-mini-trend"></div>
+        <div class="form-group" style="margin:0">
+          <label>Weight (kg)</label>
+          <input type="number" id="bw-input" placeholder="e.g. 78.5" step="0.1" min="20" max="400"
+                 style="background:var(--bg3);font-size:24px;text-align:center;font-family:'Bebas Neue';letter-spacing:1px;padding:14px">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('bw-modal')">Cancel</button>
+      <button class="btn-save"   onclick="saveBW()">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: FOOD PICKER -->
+<div class="modal-bg" id="food-picker-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="food-picker-title">Add Food</h2>
+      <button class="modal-close" onclick="closeModal('food-picker-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Search bar -->
+      <div class="food-search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="food-search-box" placeholder="Search 600+ foods…"
+               oninput="handleFoodSearch(this.value)" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div id="food-results-list" class="food-search-results" style="display:none"></div>
+
+      <!-- Recent foods -->
+      <div style="padding:0 16px 10px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px">Recent Foods</div>
+        <div id="recent-foods" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+      </div>
+
+      <!-- Selected preview -->
+      <div id="food-selected-info" style="padding:0 16px 8px"></div>
+
+      <!-- Quantity + unit -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;padding:0 16px;margin-bottom:10px">
+        <div class="form-group" style="margin:0">
+          <label>Quantity</label>
+          <input type="number" id="food-qty" value="100" min="1" oninput="updateFoodCalcDisplay()" style="background:var(--bg3)">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Unit</label>
+          <select id="food-unit" style="background:var(--bg3)">
+            <option>g</option><option>ml</option><option>piece</option>
+            <option>cup</option><option>scoop</option><option>slice</option>
+            <option>tbsp</option><option>tsp</option><option>plate</option>
+            <option>bowl</option><option>can</option><option>bottle</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Manual divider -->
+      <div style="display:flex;align-items:center;gap:10px;padding:0 16px;margin-bottom:10px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:11px;color:var(--text3)">or enter manually</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
+      <!-- Manual fields -->
+      <div class="form-group">
+        <label>Food Name</label>
+        <input type="text" id="manual-name" placeholder="e.g. Homemade Dal" style="background:var(--bg3)">
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 16px;margin-bottom:8px">
+        <div class="form-group" style="margin:0"><label>Kcal</label><input type="number" id="manual-cal" placeholder="0" style="background:var(--bg3);padding:8px 6px;font-size:13px"></div>
+        <div class="form-group" style="margin:0"><label>Prot</label><input type="number" id="manual-p" placeholder="0" step=".1" style="background:var(--bg3);padding:8px 6px;font-size:13px"></div>
+        <div class="form-group" style="margin:0"><label>Carb</label><input type="number" id="manual-c" placeholder="0" step=".1" style="background:var(--bg3);padding:8px 6px;font-size:13px"></div>
+        <div class="form-group" style="margin:0"><label>Fat</label><input type="number" id="manual-f" placeholder="0" step=".1" style="background:var(--bg3);padding:8px 6px;font-size:13px"></div>
+      </div>
+      <div style="padding:0 16px 4px">
+        <button class="btn-icon" style="width:100%;justify-content:center" onclick="addCustomFood()">
+          <i class="ti ti-bookmark"></i> Save as Custom Food
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('food-picker-modal')">Cancel</button>
+      <button class="btn-save"   onclick="addFoodFromPicker()">Add Food</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- Install button -->
+<button id="install-btn" onclick="triggerInstall()"
+  style="display:none;position:fixed;top:14px;right:14px;z-index:999;
+         background:var(--accent);color:#000;border:none;border-radius:var(--r-sm);
+         padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+         box-shadow:0 4px 16px rgba(200,255,0,.3)">
+  📲 Install App
+</button>
+
+
+<!-- SCRIPTS -->
+<script src="./db.js"></script>
+<script src="./foods.js"></script>
+<script src="./app.js"></script>
+
+<script>
+// ── Modal backdrop taps ──
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── Food search wiring ──
+function handleFoodSearch(val) {
+  const res = document.getElementById('food-results-list');
+  if (!val || val.length < 1) { res.style.display = 'none'; return; }
+  searchFoodDB(val);
+  res.style.display = 'block';
+}
+document.addEventListener('click', e => {
+  const box = document.getElementById('food-search-box');
+  const res = document.getElementById('food-results-list');
+  if (res && !res.contains(e.target) && box && !box.contains(e.target)) res.style.display = 'none';
+});
+
+// ── Volume display in log modal ──
+['log-actual-weight','log-actual-reps'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const w = parseFloat(document.getElementById('log-actual-weight').value) || 0;
+    const r = parseFloat(document.getElementById('log-actual-reps').value)   || 0;
+    const vol = document.getElementById('log-vol-display');
+    if (vol) vol.innerHTML = w && r
+      ? `Volume: <b style="color:var(--teal)">${Math.round(w * r)} kg</b>`
+      : '';
+  });
+});
+
+// ── BW mini sparkline ──
+function renderBWMiniTrend() {
+  const el = document.getElementById('bw-mini-trend');
+  if (!el || !APP || !APP.bodyWeight.length) return;
+  const last = APP.bodyWeight.slice(-10);
+  const min  = Math.min(...last.map(b => b.weight));
+  const max  = Math.max(...last.map(b => b.weight));
+  const rng  = (max - min) || 1;
+  el.innerHTML = last.map(b => {
+    const h = Math.max(6, Math.round(((b.weight - min) / rng) * 36));
+    return `<div title="${b.weight}kg" style="flex:1;background:var(--teal);border-radius:2px 2px 0 0;height:${h}px;opacity:.65"></div>`;
+  }).join('');
+}
+
+// Wrap openBWModal to inject sparkline
+const _origOpenBW = window.openBWModal;
+window.openBWModal = function() { _origOpenBW(); setTimeout(renderBWMiniTrend, 50); };
+
+// ── Enter key shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('log-modal')?.classList.contains('open'))          saveLogEntry();
+  else if (document.getElementById('bw-modal')?.classList.contains('open'))      saveBW();
+  else if (document.getElementById('food-picker-modal')?.classList.contains('open')) addFoodFromPicker();
+});
+</script>
+</body>
+</html>
